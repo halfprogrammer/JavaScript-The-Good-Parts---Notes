@@ -1,0 +1,241 @@
+* Chapter 1: Good Parts
+The good parts of Javascript include
+  - functions
+  - loose typing
+  - dynamic objects
+  - expressive object literal notation
+
+Javascript has more in common with Lisp and Scheme than Java and the like
+and has *mostly lexical scoping*.
+
+Strong typing is over-hyped and the type of bugs it catches are very trivial.
+
+Javascript uses object literal notation (something like a map) for creating objects.
+
+Uses *prototype inheritance*; no classes and stuff; directly inherits from objects.
+
+One of the bad things about js is that it does not have a notion of namespaces.
+So all the globals are put inside the common *global object* namespace because
+there is *no linker*. Unfortunately in js globals are fundamental.
+
+Throughout the book a *method* method is used to define new methods.
+
+Function.prototype.method = function (name, func) {
+  this.prototype[name] = func;
+  return this;
+}
+
+
+* Chapter 2: Grammar
+Always use *//* for comments as /* */ can come in regex.
+
+** Numbers
+  - Numbers are 64 bit and there is no specific integer type. So 1.0 and 1 are the same.
+  - Gives NaN for invalid numeric operations. *NaN == NaN* is *false*.
+    To check if the result is a NaN use *isNnN(number)*
+
+
+** Strings
+  - Strings are *16bit unicode* and are *immutable*
+  - No character type.
+
+** Statements
+  - Each <script> tag creates a compilation unit that is compiled and
+    *executed immediately*.
+  - Javascript lacks a *linker*. So all globals go into a common namespace.
+  - *var* creates local bindings for the function.
+  - switch, while, for and do can have optional label to interact with break.
+  - Blocks {} in javascripts *DO NOT CREATE NEW SCOPE*. So define variables at the top
+    of the function and *NOT IN BLOCKS*
+  - False is represented by
+     - false
+     - null
+     - undefined
+     - Empty string ''
+     - 0
+     - NaN
+  - Case statements need *not be constants*.
+  - for statement has two syntaxes
+     1. for(initialize; test; step) {}
+     2. for(myvar in obj) {}
+  - The second for loop iterates through the *property name string* of an object.
+  - *TODO* Find out what obj.hasOwnProperty(variable) is.
+  - *do* loop is also available.
+  - in *try/catch* catch mandatorially takes a variable name.
+  - *throw* throws an exception object which has the following properties
+    - has *name* property
+    - has *message* property
+
+** Expressions
+Nothing new here. Look at the book for precedence table.
+
+** Literals
+  - Convenien way of specifying new objects.
+  - Name of the properties can be specified as *names* or as *strings*
+
+** Functions
+  - They are of the form
+  - function name (parameter-list) {body}
+
+
+* Chapter 3: Objects
+  - Symple types of js are
+    - numbers
+    - strings
+    - booleans
+    - null
+    - undefined
+  - Objects are *mutable keyed collection*
+    - keys can be any string *including an empty string*
+    - value can be anything *except undefined*
+
+** Object Literals
+  - Object literal is a pair of curly brace surrounding comma separated name/value pair
+  - If the key value is not a valid javascript name then it has to be surrounded by "".
+    - Eg.
+      - var stooge = { "first-name" : "Jerome", "last-name" : "Howard"};
+
+** Retrieval
+  - If the key name is a constant and a legal javascript name then the property can be
+    accessed as *obj.property*.
+  - Otherwise property can be accessed as *obj["property"]*.
+  - For nonexistent member an obj["non-existent-property"] returns *undefined*
+  - Accessing properties of 'undefined' results in *TypeError* exception.
+
+** Update
+  - Updation of existing keys and appending new keys/values happen through assignment
+    - obj["property"] = new-value;
+
+** Reference
+  - Objects are passed around by reference.
+
+** Prototype
+  - Every object is linked to a prototype object from which it inherits its properties
+  - All objects are linked to Object.prototype
+  - The syntax to specify an object's prototype is messy. This can be simplified by adding
+    a *create* function to *Object*
+
+if(typeof Object.create != 'function') // check if Object.create already doesn't exist
+{
+  Object.create = function (proto) {
+    var F = function () {};
+    F.prototype = proto;
+    return new F();
+  };
+}
+
+var another_stooge = Object.create(stooge);
+
+  - prototype link has *no effect on updating*.
+  - While retrieval if the object does not have a selected property then its prototype will be
+    referred. And if the prototype lacks the property then it will traverse further in the
+    chain. This is called *delegation*
+  - Prototype relationship is dynamic. If a prototype gets a new property then all the objects
+    based on that prototype will get the property.
+
+** Reflection
+  - Reflection is done primarily with typeof operator.
+  - Since during reflection we only care about data and not functions ignore 'function'
+  - typeof obj.unknown_property will be *undefined*
+  - if the object does not have a property and its prototype has that property even then typeof
+    will return correct value
+  - If the above is not desirable then use *obj.hasOwnProperty('prototype-property'), which would
+    return false
+
+** Enumeration
+  - for(name in obj) {} will enumerate through all the properties of an object
+    *including functions and prototype properties*.
+
+var name;
+for (name in another_stooge) {
+  if (typeof another_stooge[name] !== 'function') {
+    document.writeln(name + ': ' + another_stooge[name]);
+  }
+}
+
+  - for-in syntax does not guarantee order of traversal of properties. If ordering is important
+    then
+
+var i;
+var properties = ['first-name', 'middle-name', 'last-name', 'profession'];
+for (i = 0; i < properties.length; i += 1) {
+  document.writeln(properties[i] + ": " +
+             another_stooge[properties[i]]);
+}
+
+** Delete
+  - Used to remove a property from an object.
+  - If the property being deleted was shadowing prototype's property then prototype's property
+    will be visible from then on.
+  - delete does not touch the prototype chain
+
+delete obj.property;
+
+** Global Abatement
+  - Since it is not advisable to use globals it is advisable to reduce global footprint by creating
+    a master object, say MYAPP and putting all the variables you need inside.
+    
+
+* Chapter 4: Functions
+** Function Objects
+   - Functions are objects
+   - Functions have two hidden properties (in addition to object properties)
+     1. Function's context
+     2. Code
+   - The prototype of function object is an object whose object.constructor is the function
+
+** Function Literal
+   - Function objects are created with function literals
+
+var add = function (a, b) {
+  return a + b;
+}
+
+   - Function literal has four parts
+     1. reserve word *function*
+     2. *Optional* function name. If no name is given then it is an *anonymous* function.
+     3. Set of parameters
+     4. Statements wrapped in the {}
+   - Inner functions are allowed in javascript and they have access to their parent's
+     parameters and variables
+
+** Invocation
+   - In addition to declared parameters, every function receives two additional parameters,
+     *this* and *arguments*.
+   - The value of *this* is extremely important and is determined by its *invocation pattern*
+   - There are four *invocation patterns*
+     - Method invocation
+     - function invocation
+     - constructor invocation
+     - apply invocation
+   - There is no check for the number of parameters declared by the function and the number
+     of parameters used in the funciton call.
+     - If in the call there are too few parameters then the extra formal parameters will get
+       *undefined* value
+     - If there are more parameters than formal parameters then the extra ones are ignored.
+     - *No type checking* either
+
+*** Method Invocation Pattern
+   - When a function is stored as a property of an object then it is called a *method*.
+   - When a method is invoced *this* will be the *object*
+   - The binding of this to the object happens very late *during invocation*. This makes
+     *this* highly reusable.
+   - Methods which get their context from *this* are called *public methods*
+
+var myObject = {
+   value: 0,
+   increment: function(inc) {
+      this.value += typeof inc === 'number' ? inc : 1;
+   }
+};
+
+myObject.increment();
+document.writeln(myObject.value); // 1
+
+myObject.increment(2);
+document.writeln(myObject.value); // 3
+
+
+*** Function Invocation Pattern
+  - When a function is not a property of an object then it is invoked as a function.
+  - When called like this *this* is bound to the global object.
